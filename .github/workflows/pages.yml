@@ -5,6 +5,11 @@ on:
     branches: [main]
     paths:
       - "index.html"
+      - "dashboard.html"
+      - "auth.html"
+      - "app.html"
+      - "api-config.js"
+      - "favicon.svg"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
