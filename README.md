@@ -1,45 +1,33 @@
 # Watchtower
 
-**Watchtower** is a long-term, modular Security Operations Center (SOC) platform built for security event collection, detection engineering, threat hunting, incident response, and digital forensics.
-
-This is a new project, separate from Sentinel. It will be developed incrementally, with tested milestones and documented design decisions.
+**Watchtower** is a modular Security Operations Center (SOC) platform for security event collection, detection engineering, threat hunting, incident response, and digital forensics. It is a separate project from Sentinel and is being built in tested milestones.
 
 ## Project status
 
-**Milestone 1 — Foundation (implementation started)**
+**Milestone 2 — Accounts and workspace isolation (implementation started)**
 
-The initial API supports health checks, normalized security-event ingestion, persistent storage, and filtered event retrieval. PostgreSQL is the intended primary database; SQLite is the zero-configuration local development default.
+The API foundation includes account registration and login, signed bearer access tokens, password hashing, workspace membership, and workspace-scoped event ingestion and retrieval. This is an early development implementation, not yet ready for public customer data.
 
-## Public website (GitHub Pages)
+## Public website
 
-The repository includes a static public landing page and an interactive demo using fictional sample events. It does not connect to the API or collect visitor data.
+- Landing page: https://btwsalts.github.io/watchtower/
+- SOC dashboard preview: https://btwsalts.github.io/watchtower/dashboard.html
+- Browser favicon: `favicon.svg`
 
-To publish it for free:
+The public dashboard is a static demo using fictional data. It does not connect to the API or collect visitor data.
 
-1. Open the repository's **Settings → Pages**: https://github.com/btwsalts/watchtower/settings/pages
-2. Under **Build and deployment**, choose **GitHub Actions** as the source.
-3. Save the setting. The workflow in `.github/workflows/pages.yml` will deploy the site after a push to `main`; you can also run it from **Actions → Deploy Watchtower public website → Run workflow**.
-4. Wait for the workflow to finish, then open the URL shown in the deployment job. It should be `https://btwsalts.github.io/watchtower/` for this repository, unless GitHub shows a different URL.
-
-The first deployment may require that one-time Pages setting in repository settings. The public website is separate from the FastAPI backend; GitHub Pages cannot host the Python API or PostgreSQL database.
-
-## Public interface
-
-- Landing page: `index.html`
-- Interactive SOC dashboard preview: `dashboard.html`
-- SVG browser favicon: `favicon.svg`
-
-The dashboard currently uses fictional in-browser sample data. It is not connected to the API, has no login, and does not perform live monitoring or response actions.
-
-## Current capabilities
+## Current API capabilities
 
 - Health and database-readiness endpoints
-- Validated security-event ingestion
-- UTC timestamp normalization and event-type normalization
-- SQLite for local development; PostgreSQL through configuration
-- Event listing with severity, event type, and source IP filters
-- Bounded pagination
-- API tests and Docker Compose development services
+- Account registration and login
+- Argon2 password hashing through pwdlib
+- Signed JWT bearer access tokens with expiration
+- Workspace membership and owner role on registration
+- Workspace selection via the `X-Workspace-ID` request header
+- Workspace-scoped event ingestion and retrieval
+- Severity, event type, and source IP filters with bounded pagination
+- SQLite for local development; PostgreSQL via configuration
+- Tests and Docker Compose development services
 
 ## Run locally on Linux
 
@@ -54,9 +42,7 @@ pip install -e .
 uvicorn watchtower.main:app --reload
 ```
 
-The API listens on `http://127.0.0.1:8000`. The local SQLite database is created as `watchtower.db` in the current working directory.
-
-Open the interactive API documentation at `http://127.0.0.1:8000/docs`.
+The API listens on `http://127.0.0.1:8000`. SQLite creates `watchtower.db` in the working directory. API documentation is available at `http://127.0.0.1:8000/docs`.
 
 ## Run tests
 
@@ -64,66 +50,81 @@ Open the interactive API documentation at `http://127.0.0.1:8000/docs`.
 pytest -q
 ```
 
-## Run with PostgreSQL using Docker Compose
-
-Docker Compose publishes the API on localhost only. The database is kept on the internal Compose network.
+## Register an account
 
 ```bash
-docker compose up --build
+curl -X POST http://127.0.0.1:8000/api/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "email": "analyst@example.com",
+    "display_name": "SOC Analyst",
+    "workspace_name": "My SOC",
+    "password": "replace-this-with-a-long-unique-password"
+  }'
 ```
 
-The default Compose password is for local development only. Set a strong `POSTGRES_PASSWORD` in your shell or local environment before using this stack beyond a disposable local environment. Do not expose this development deployment directly to the internet.
+The response contains an access token and the new workspace ID. Treat the token as a secret. Passwords must be at least 12 characters.
 
-## API quick start
-
-Check process health:
+## Log in
 
 ```bash
-curl http://127.0.0.1:8000/healthz
+curl -X POST http://127.0.0.1:8000/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"analyst@example.com","password":"replace-this-with-a-long-unique-password"}'
 ```
 
-Check database readiness:
+## Submit and list workspace events
 
-```bash
-curl http://127.0.0.1:8000/readyz
-```
-
-Submit a sample event:
+Replace `ACCESS_TOKEN` and `WORKSPACE_ID` with the values returned by registration or login.
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/events \
+  -H 'Authorization: Bearer ACCESS_TOKEN' \
+  -H 'X-Workspace-ID: WORKSPACE_ID' \
   -H 'Content-Type: application/json' \
   -d '{
     "event_type": "SSH Brute-Force",
     "source": "linux-agent",
     "hostname": "lab-linux-01",
     "source_ip": "192.0.2.10",
-    "username": "test-user",
     "severity": "high",
     "message": "Repeated failed SSH logins",
     "raw_event": {"attempts": 8}
   }'
+
+curl http://127.0.0.1:8000/api/v1/events \
+  -H 'Authorization: Bearer ACCESS_TOKEN' \
+  -H 'X-Workspace-ID: WORKSPACE_ID'
 ```
 
-List events, or filter by event type and severity:
+A user must be a member of the selected workspace. The API scopes event queries to that workspace; choosing another user's workspace ID does not grant access.
+
+## PostgreSQL with Docker Compose
 
 ```bash
-curl 'http://127.0.0.1:8000/api/v1/events?limit=50'
-curl 'http://127.0.0.1:8000/api/v1/events?event_type=ssh-brute-force&severity=high'
+export POSTGRES_PASSWORD="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export WATCHTOWER_JWT_SECRET="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+docker compose up --build
 ```
+
+Compose binds the API to localhost only. The default JWT secret and database password in Compose are development defaults: override both for any shared environment. To enable production configuration checks, set `APP_ENV=production` and supply `WATCHTOWER_JWT_SECRET` with at least 32 random characters.
+
+## Important limitations before public launch
+
+This milestone is not a complete multi-tenant production service. Before accepting real customer data, Watchtower still needs formal versioned database migrations, rate limiting, login abuse controls, email verification and password reset, workspace member invitation and role-management endpoints, audit logging, secret rotation, backup/restore testing, operational monitoring, and a security review. Existing events from a pre-workspace database are kept unassigned during upgrade and are not returned to workspace users; migrate them deliberately if they need to be retained.
 
 ## Planned capabilities
 
-- Rule-based detection and alert lifecycle
-- Analyst dashboard and incident management
+- Detection rules and alert lifecycle
+- Live analyst dashboard and incident management
 - Linux and Windows endpoint agents
 - Network telemetry and detection
 - Threat-intelligence enrichment and MITRE ATT&CK mapping
 - Investigation timelines and forensic evidence
-- Controlled attack simulation and lab-only response automation
+- Controlled attack simulation and scoped response automation
 
-See [the roadmap](docs/ROADMAP.md) for milestones.
+See [the roadmap](docs/ROADMAP.md).
 
 ## Safety
 
-Watchtower is intended for authorized defensive monitoring and isolated lab testing. The initial API is a development foundation, not a production-secure deployment: authentication, authorization, agent identity, rate limiting, database migrations, and audit controls must be implemented before exposing it to untrusted networks. Response actions must be explicitly configured and scoped to systems the operator is authorized to administer.
+Use Watchtower only for systems and data you are authorized to monitor. Keep development deployments bound to localhost and do not expose the API directly to the internet. Automated response features must be explicitly scoped to authorized systems.
