@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090b0d">
+<meta name="description" content="Sign in or create a Watchtower SOC workspace.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg"><title>Access Watchtower</title>
+<style>
+:root{color-scheme:dark;--bg:#090b0d;--panel:#101316;--line:#272d33;--text:#f0f3f5;--muted:#9ba5ae;--dim:#68737d;--accent:#d8ff64;--red:#ff858b;--green:#9de7b0}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#1a2115 0,transparent 42%),var(--bg);color:var(--text);font:14px/1.6 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;flex-direction:column}a{color:inherit;text-decoration:none}.top{height:72px;border-bottom:1px solid var(--line);display:flex;align-items:center}.wrap{width:min(1060px,calc(100% - 32px));margin:auto}.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.07em}.logo{width:31px;height:31px;border:1px solid #465044;border-radius:9px;display:grid;place-items:center;color:var(--accent);background:#141912}.logo svg{width:20px}.back{margin-left:auto;color:var(--muted);font-size:12px}.main{flex:1;display:grid;place-items:center;padding:48px 16px}.auth{width:min(440px,100%)}.eyebrow{font-size:10px;color:var(--accent);font-weight:750;letter-spacing:.16em;text-transform:uppercase}.auth h1{font-size:34px;line-height:1.15;letter-spacing:-.05em;margin:10px 0}.sub{color:var(--muted);font-size:13px;margin:0 0 24px}.panel{border:1px solid var(--line);border-radius:16px;background:linear-gradient(145deg,#121619,#0e1113);padding:24px;box-shadow:0 20px 80px #0005}.tabs{display:grid;grid-template-columns:1fr 1fr;padding:4px;background:#090b0d;border:1px solid var(--line);border-radius:9px;margin-bottom:23px}.tab{border:0;border-radius:6px;padding:9px;background:transparent;color:var(--muted);cursor:pointer;font:inherit;font-size:12px}.tab.active{background:#20271a;color:var(--accent);font-weight:700}.field{display:grid;gap:6px;margin:14px 0}.field label{font-size:11px;color:#c9d0d5;font-weight:650}.field input{width:100%;border:1px solid #30373c;border-radius:8px;background:#090b0d;padding:12px;color:var(--text);font:inherit;outline:none}.field input:focus{border-color:var(--accent)}.hint{font-size:10px;color:var(--dim)}.submit{width:100%;border:1px solid var(--accent);border-radius:8px;padding:12px;background:var(--accent);color:#11150a;font-weight:800;cursor:pointer;margin-top:9px}.submit:disabled{opacity:.6;cursor:wait}.message{display:none;margin:15px 0 0;padding:11px 12px;border-radius:8px;border:1px solid var(--line);font-size:12px;overflow-wrap:anywhere}.message.error{display:block;border-color:#573137;background:#241417;color:var(--red)}.message.ok{display:block;border-color:#33472d;background:#151d12;color:var(--green)}.notice{margin-top:14px;padding:12px;border:1px solid #3e3a2a;background:#1a1811;border-radius:9px;color:#cfc5a3;font-size:11px}.foot{padding:20px 0 27px;color:var(--dim);font-size:10px;text-align:center}.foot a{color:var(--muted)}@media(max-width:500px){.panel{padding:19px}.auth h1{font-size:29px}.top{height:62px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap" style="display:flex;align-items:center"><a class="brand" href="index.html"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12s3.2-6 9-6 9 6 9 6-3.2 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.7"/></svg></span>WATCHTOWER</a><a class="back" href="index.html">← Back to site</a></div></header>
+<main class="main"><section class="auth">
+<div class="eyebrow">SECURE WORKSPACE ACCESS</div><h1 id="heading">Welcome back.</h1><p class="sub" id="subtitle">Sign in to continue to your security workspace.</p>
+<div class="panel">
+<div class="tabs" role="tablist"><button class="tab active" id="login-tab" type="button">Sign in</button><button class="tab" id="register-tab" type="button">Create account</button></div>
+<form id="auth-form">
+<div id="register-fields" hidden>
+<div class="field"><label for="display-name">Your name</label><input id="display-name" name="display_name" autocomplete="name" maxlength="120" placeholder="SOC Analyst"></div>
+<div class="field"><label for="workspace-name">Workspace name</label><input id="workspace-name" name="workspace_name" maxlength="120" placeholder="My SOC workspace"></div>
+</div>
+<div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" required maxlength="320" placeholder="you@example.com"></div>
+<div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required minlength="12" maxlength="128" placeholder="At least 12 characters"><div class="hint" id="password-hint">Use your account password.</div></div>
+<button class="submit" id="submit" type="submit">Sign in to Watchtower ↗</button>
+<div class="message" id="message" role="status" aria-live="polite"></div>
+</form>
+</div>
+<div class="notice" id="api-notice">Connection setup is required before this page can authenticate: the API must be deployed and its URL configured.</div>
+</section></main>
+<footer class="foot">WATCHTOWER · EARLY DEVELOPMENT · <a href="https://github.com/btwsalts/watchtower">Open source</a></footer>
+<script src="api-config.js"></script>
+<script>
+const form=document.getElementById("auth-form"),loginTab=document.getElementById("login-tab"),registerTab=document.getElementById("register-tab"),registerFields=document.getElementById("register-fields"),message=document.getElementById("message"),submit=document.getElementById("submit"),notice=document.getElementById("api-notice");
+let mode=new URLSearchParams(location.search).get("mode")==="signup"?"register":"login";
+function setMode(next){mode=next;const registering=mode==="register";loginTab.classList.toggle("active",!registering);registerTab.classList.toggle("active",registering);registerFields.hidden=!registering;document.getElementById("heading").textContent=registering?"Create your workspace.":"Welcome back.";document.getElementById("subtitle").textContent=registering?"Set up your account and private SOC workspace.":"Sign in to continue to your security workspace.";document.getElementById("password").autocomplete=registering?"new-password":"current-password";document.getElementById("password").minLength=registering?12:1;document.getElementById("password-hint").textContent=registering?"Use at least 12 characters.":"Use your account password.";submit.textContent=registering?"Create account ↗":"Sign in to Watchtower ↗";message.className="message";message.textContent=""}
+loginTab.addEventListener("click",()=>setMode("login"));registerTab.addEventListener("click",()=>setMode("register"));setMode(mode);
+const apiBase=(window.WATCHTOWER_API_URL||"").replace(/\/$/,"");
+if(apiBase){notice.textContent="API endpoint configured. Use an account for a workspace you are authorized to access.";notice.className="notice";}
+form.addEventListener("submit",async event=>{event.preventDefault();message.className="message";message.textContent="";if(!apiBase){message.className="message error";message.textContent="The API is not configured yet. Deploy the Watchtower API, then set WATCHTOWER_API_URL in api-config.js.";return}
+const payload={email:document.getElementById("email").value.trim(),password:document.getElementById("password").value};
+if(mode==="register"){payload.display_name=document.getElementById("display-name").value.trim();payload.workspace_name=document.getElementById("workspace-name").value.trim();if(!payload.display_name||!payload.workspace_name){message.className="message error";message.textContent="Enter your name and a workspace name.";return}}
+submit.disabled=true;submit.textContent=mode==="register"?"Creating workspace…":"Signing in…";
+try{const response=await fetch(apiBase+(mode==="register"?"/api/v1/auth/register":"/api/v1/auth/login"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail||"Authentication failed. Check your details and try again.");sessionStorage.setItem("watchtower.access_token",body.access_token);sessionStorage.setItem("watchtower.user",JSON.stringify(body.user));sessionStorage.setItem("watchtower.workspace",JSON.stringify(body.workspace));location.href="app.html"}catch(error){message.className="message error";message.textContent=error.message||"Could not connect to Watchtower API. Check the API URL and CORS configuration."}finally{submit.disabled=false;submit.textContent=mode==="register"?"Create account ↗":"Sign in to Watchtower ↗"}});
+</script>
+</body></html>
