@@ -17,7 +17,7 @@
 <header class="topbar">
   <div class="wrap nav">
     <a class="brand" href="#top" aria-label="Watchtower home"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12s3.2-6 9-6 9 6 9 6-3.2 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.7"/><path d="M12 2v2M12 20v2"/></svg></span>WATCHTOWER</a>
-    <nav class="navlinks" aria-label="Main navigation"><a href="#platform">Platform</a><a href="dashboard.html">Dashboard</a><a href="#demo">Demo</a><a href="#roadmap">Roadmap</a><a class="navcta" href="https://github.com/btwsalts/watchtower" target="_blank" rel="noreferrer">View on GitHub ↗</a></nav>
+    <nav class="navlinks" aria-label="Main navigation"><a href="#platform">Platform</a><a href="dashboard.html">Dashboard</a><a href="auth.html">Sign in</a><a class="navcta" href="auth.html?mode=signup">Create workspace</a><a href="#demo">Demo</a><a href="#roadmap">Roadmap</a><a class="navcta" href="https://github.com/btwsalts/watchtower" target="_blank" rel="noreferrer">View on GitHub ↗</a></nav>
   </div>
 </header>
 <main id="top">
@@ -26,7 +26,7 @@
       <div class="eyebrow"><span class="dot"></span> OPEN SECURITY PLATFORM · IN DEVELOPMENT</div>
       <h1>See the signal.<br><span>Know the threat.</span></h1>
       <p class="lead">A modular Security Operations Center platform built to bring security events, detection engineering, investigations, and response into one place.</p>
-      <div class="actions"><a class="button primary" href="dashboard.html">Open SOC dashboard ↗</a><a class="button secondary" href="#demo">Explore the demo <span aria-hidden="true">↓</span></a><a class="button secondary" href="https://github.com/btwsalts/watchtower" target="_blank" rel="noreferrer">Explore the source ↗</a></div>
+      <div class="actions"><a class="button primary" href="auth.html?mode=signup">Create workspace ↗</a><a class="button secondary" href="dashboard.html">Open SOC dashboard ↗</a><a class="button secondary" href="#demo">Explore the demo <span aria-hidden="true">↓</span></a><a class="button secondary" href="https://github.com/btwsalts/watchtower" target="_blank" rel="noreferrer">Explore the source ↗</a></div>
       <p class="micro">Open development · Built in milestones · Defensive security first</p>
     </div>
     <div class="dash" aria-label="Illustrative Watchtower security dashboard preview">
@@ -74,7 +74,7 @@
   </div></section>
   <section class="wrap" style="padding:0 0 70px"><div class="cta"><div><div class="eyebrow"><span class="dot"></span> OPEN DEVELOPMENT</div><h2>Help shape Watchtower.</h2><p>Follow the code, review the roadmap, and track progress as the platform grows. Watchtower is under active development; the hosted SOC and user accounts are not live yet.</p></div><a class="button primary" href="https://github.com/btwsalts/watchtower" target="_blank" rel="noreferrer">View repository on GitHub ↗</a></div></section>
 </main>
-<footer class="footer"><div class="wrap footerinner"><a class="brand" href="#top"><span class="mark" style="width:25px;height:25px;border-radius:7px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/></svg></span>WATCHTOWER</a><span>Open-source SOC platform · Early development</span><div class="footerlinks"><a href="https://github.com/btwsalts/watchtower" target="_blank" rel="noreferrer">GitHub ↗</a><a href="#roadmap">Roadmap</a></div></div><div class="wrap" style="margin-top:14px">Demo events are fictional. Do not submit real security logs or sensitive information through this page.</div></footer>
+<footer class="footer"><div class="wrap footerinner"><a class="brand" href="#top"><span class="mark" style="width:25px;height:25px;border-radius:7px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/></svg></span>WATCHTOWER</a><span>Open-source SOC platform · Early development</span><div class="footerlinks"><a href="auth.html">Sign in</a><a href="auth.html?mode=signup">Create account</a><a href="https://github.com/btwsalts/watchtower" target="_blank" rel="noreferrer">GitHub ↗</a><a href="#roadmap">Roadmap</a></div></div><div class="wrap" style="margin-top:14px">Demo events are fictional. Do not submit real security logs or sensitive information through this page.</div></footer>
 <script>
 const sampleEvents=[
  {event:"Repeated SSH authentication failures",host:"linux-lab-01",ip:"192.0.2.10",severity:"High",time:"00:42:18"},
