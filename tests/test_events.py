@@ -194,6 +194,10 @@ def test_production_requires_strong_jwt_secret(monkeypatch: pytest.MonkeyPatch) 
     with pytest.raises(RuntimeError, match="WATCHTOWER_JWT_SECRET"):
         validate_security_config()
 
+    monkeypatch.setenv("WATCHTOWER_JWT_SECRET", "watchtower-local-development-secret-change-before-production")
+    with pytest.raises(RuntimeError, match="development default is forbidden"):
+        validate_security_config()
+
     monkeypatch.setenv("WATCHTOWER_JWT_SECRET", "production-secret-with-at-least-32-chars")
     validate_security_config()
 
