@@ -123,6 +123,22 @@ Owners/admins can create invitations from the workspace portal or `POST /api/v1/
 
 This is not yet a production-ready multi-tenant service. Before accepting customer data, Watchtower still needs versioned Alembic migrations, persistent login rate limiting and abuse controls, email verification and password reset, token/session revocation, owner transfer and member removal flows, stronger invitation delivery, comprehensive audit coverage, backup/restore testing, operational monitoring, and an independent security review. The current legacy database upgrade is transitional, not a substitute for a migration system. Events from an older schema remain unassigned and are intentionally hidden from workspace queries until deliberately migrated.
 
+## AbuseIPDB threat intelligence (initial integration)
+
+The authenticated endpoint `GET /api/v1/threat-intel/ip/{ip_address}` enriches a public IP address using AbuseIPDB. It requires a bearer access token and the `X-Workspace-ID` header, just like other workspace endpoints.
+
+Configure `ABUSEIPDB_API_KEY` in the API server environment (never in `api-config.js` or browser code). Without a key, the endpoint returns `503` with a configuration message. Only globally routable public IPs are sent to the provider; private, loopback, reserved, and malformed addresses are rejected. Results are normalized, cached in process for 15 minutes (up to 1,000 entries), and lookups are written to the workspace audit log. Provider rate limits and outages are returned as explicit errors rather than being treated as a clean reputation result. Cache entries are per process, so a multi-worker deployment should add shared cache storage later.
+
+Example after signing in and obtaining a token:
+
+```bash
+curl "http://127.0.0.1:8000/api/v1/threat-intel/ip/8.8.8.8" \\
+  -H "Authorization: Bearer ACCESS_TOKEN" \\
+  -H "X-Workspace-ID: WORKSPACE_ID"
+```
+
+Run integration tests with `pytest -q`. Tests use mocked HTTP responses and do not need a real AbuseIPDB key or network access.
+
 ## Planned capabilities
 
 - Detection rules and alert lifecycle

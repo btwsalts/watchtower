@@ -39,7 +39,7 @@ from watchtower.schemas import (
     UserRead,
     WorkspaceRead,
 )
-from watchtower.security import (
+from watchtower.threat_intel import (\n    IPReputation,\n    ThreatIntelConfigurationError,\n    ThreatIntelRateLimited,\n    ThreatIntelUnavailable,\n    lookup_ip_reputation,\n)\nfrom watchtower.security import (
     ACCESS_TOKEN_MINUTES,
     create_access_token,
     get_current_user,
@@ -427,3 +427,45 @@ def list_events(
         logger.exception("Failed to query security events")
         raise HTTPException(status_code=500, detail="events could not be retrieved") from exc
     return EventList(items=events, limit=limit, offset=offset, count=total)
+
+
+
+@app.get(
+    "/api/v1/threat-intel/ip/{ip_address}",
+    response_model=IPReputation,
+    tags=["threat intelligence"],
+)
+async def check_ip_reputation(
+    ip_address: str,
+    membership: Annotated[WorkspaceMembership, Depends(require_workspace)],
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> IPReputation:
+    """Enrich a public IP with AbuseIPDB reputation for an authenticated workspace member."""
+    try:
+        result = await lookup_ip_reputation(ip_address)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ThreatIntelConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ThreatIntelRateLimited as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    except ThreatIntelUnavailable as exc:
+        logger.warning("Threat-intelligence lookup unavailable: %s", exc)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    audit(
+        db,
+        "threat_intel.ip_lookup",
+        actor_user_id=user.id,
+        workspace_id=membership.workspace_id,
+        target_type="ip_address",
+        target_id=result.ip_address,
+        details={
+            "provider": result.provider,
+            "abuse_confidence_score": result.abuse_confidence_score,
+            "cached": result.cached,
+        },
+    )
+    db.commit()
+    return result
