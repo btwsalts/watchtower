@@ -258,6 +258,7 @@ def create_invitation(
         expires_at=expires_at,
     )
     db.add(invitation)
+    db.flush()
     audit(db, "workspace.invitation_created", actor_user_id=user.id, workspace_id=membership.workspace_id,
           target_type="invitation", target_id=invitation.id, details={"email": payload.email, "role": payload.role})
     db.commit()
@@ -309,6 +310,7 @@ def accept_invitation(
     invitation.accepted_at = now
     membership = WorkspaceMembership(user_id=user.id, workspace_id=invitation.workspace_id, role=invitation.role)
     db.add(membership)
+    db.flush()
     audit(db, "workspace.invitation_accepted", actor_user_id=user.id, workspace_id=invitation.workspace_id,
           target_type="membership", target_id=membership.id, details={"role": invitation.role})
     db.commit()
