@@ -20,10 +20,17 @@
 - [x] Require workspace membership for event API access
 - [x] Scope event writes and reads to the selected workspace
 - [x] Add tests for authentication and cross-workspace isolation
+- [x] Add browser sign-in/sign-up and authenticated workspace portal
+- [x] Add member invitations and workspace role management
+- [x] Add initial audit trail for account, invitation, role, and event actions
+- [x] Configure CORS for the browser frontend
 - [ ] Add login rate limiting and abuse monitoring
-- [ ] Add invitation, membership management, and role-based permissions
+- [ ] Add invitation email delivery, member removal, and owner transfer
+- [ ] Add more complete role-based permissions for future detections and incidents
 - [ ] Add email verification, password reset, and session/token revocation
-- [ ] Add audit logging and complete a security review
+- [ ] Expand audit coverage, add login rate limiting, and complete a security review
+- [ ] Replace transitional schema upgrade with versioned Alembic migrations
+- [ ] Deploy the API and configure the public frontend endpoint
 
 ## Milestone 3 — Detection and alerts
 
