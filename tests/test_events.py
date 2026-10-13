@@ -298,3 +298,17 @@ def test_invitation_is_email_bound_and_single_use(client: TestClient) -> None:
         json={"invite_token": token},
     )
     assert wrong_accept.status_code == 403
+
+    invited_user = register(client, "right@example.com", "Right Workspace")
+    first_accept = client.post(
+        "/api/v1/workspaces/invitations/accept",
+        headers={"Authorization": f"Bearer {invited_user['access_token']}"},
+        json={"invite_token": token},
+    )
+    assert first_accept.status_code == 200
+    replay = client.post(
+        "/api/v1/workspaces/invitations/accept",
+        headers={"Authorization": f"Bearer {invited_user['access_token']}"},
+        json={"invite_token": token},
+    )
+    assert replay.status_code == 400
