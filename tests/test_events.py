@@ -65,3 +65,37 @@ def test_rejects_invalid_severity_and_empty_message(client: TestClient) -> None:
 def test_event_list_pagination_is_bounded(client: TestClient) -> None:
     assert client.get("/api/v1/events?limit=201").status_code == 422
     assert client.get("/api/v1/events?offset=-1").status_code == 422
+
+
+def test_configured_api_token_protects_event_endpoints(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    token = "test-only-token-with-at-least-32-characters"
+    monkeypatch.setenv("WATCHTOWER_API_TOKEN", token)
+    monkeypatch.setenv("APP_ENV", "development")
+
+    assert client.get("/api/v1/events").status_code == 401
+    assert client.get("/api/v1/events", headers={"Authorization": "Bearer wrong-token"}).status_code == 401
+
+    headers = {"Authorization": f"Bearer {token}"}
+    created = client.post(
+        "/api/v1/events",
+        headers=headers,
+        json={"event_type": "token-auth-check", "message": "Test event"},
+    )
+    assert created.status_code == 201
+    assert client.get("/api/v1/events", headers=headers).status_code == 200
+
+
+def test_production_requires_long_api_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    from watchtower.security import validate_security_config
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.delenv("WATCHTOWER_API_TOKEN", raising=False)
+    with pytest.raises(RuntimeError, match="Production requires WATCHTOWER_API_TOKEN"):
+        validate_security_config()
+
+    monkeypatch.setenv("WATCHTOWER_API_TOKEN", "short")
+    with pytest.raises(RuntimeError, match="Production requires WATCHTOWER_API_TOKEN"):
+        validate_security_config()
+
+    monkeypatch.setenv("WATCHTOWER_API_TOKEN", "production-token-that-is-at-least-32-chars")
+    validate_security_config()
