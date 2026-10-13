@@ -10,6 +10,19 @@ This is a new project, separate from Sentinel. It will be developed incrementall
 
 The initial API supports health checks, normalized security-event ingestion, persistent storage, and filtered event retrieval. PostgreSQL is the intended primary database; SQLite is the zero-configuration local development default.
 
+## Public website (GitHub Pages)
+
+The repository includes a static public landing page and an interactive demo using fictional sample events. It does not connect to the API or collect visitor data.
+
+To publish it for free:
+
+1. Open the repository's **Settings → Pages**: https://github.com/btwsalts/watchtower/settings/pages
+2. Under **Build and deployment**, choose **GitHub Actions** as the source.
+3. Save the setting. The workflow in `.github/workflows/pages.yml` will deploy the site after a push to `main`; you can also run it from **Actions → Deploy Watchtower public website → Run workflow**.
+4. Wait for the workflow to finish, then open the URL shown in the deployment job. It should be `https://btwsalts.github.io/watchtower/` for this repository, unless GitHub shows a different URL.
+
+The first deployment may require that one-time Pages setting in repository settings. The public website is separate from the FastAPI backend; GitHub Pages cannot host the Python API or PostgreSQL database.
+
 ## Current capabilities
 
 - Health and database-readiness endpoints
