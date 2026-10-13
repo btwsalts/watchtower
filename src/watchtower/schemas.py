@@ -67,6 +67,52 @@ class AuthResponse(BaseModel):
     workspace: WorkspaceRead
 
 
+
+
+class InvitationCreate(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    role: Literal["admin", "analyst", "viewer"] = "analyst"
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        value = value.strip().lower()
+        if value.count("@") != 1 or "." not in value.rsplit("@", 1)[-1]:
+            raise ValueError("Enter a valid email address")
+        return value
+
+
+class InvitationRead(BaseModel):
+    id: str
+    email: str
+    role: WorkspaceRole
+    expires_at: datetime
+    created_at: datetime
+
+
+class InvitationCreated(InvitationRead):
+    invite_token: str
+
+
+class InvitationAccept(BaseModel):
+    invite_token: str = Field(min_length=32, max_length=256)
+
+
+class MembershipRoleUpdate(BaseModel):
+    role: WorkspaceRole
+
+
+class AuditLogRead(BaseModel):
+    id: str
+    workspace_id: str | None
+    actor_user_id: str | None
+    action: str
+    target_type: str | None
+    target_id: str | None
+    details: dict
+    created_at: datetime
+
+
 class SecurityEventCreate(BaseModel):
     """Incoming event fields accepted by the ingestion API."""
 
