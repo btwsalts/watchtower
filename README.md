@@ -6,13 +6,93 @@ This is a new project, separate from Sentinel. It will be developed incrementall
 
 ## Project status
 
-**Milestone 1 — Foundation (in progress)**
+**Milestone 1 — Foundation (implementation started)**
 
-The first milestone establishes a backend API for health checks and normalized security-event ingestion and retrieval. PostgreSQL is the intended primary database; a local SQLite default keeps initial development easy.
+The initial API supports health checks, normalized security-event ingestion, persistent storage, and filtered event retrieval. PostgreSQL is the intended primary database; SQLite is the zero-configuration local development default.
+
+## Current capabilities
+
+- Health and database-readiness endpoints
+- Validated security-event ingestion
+- UTC timestamp normalization and event-type normalization
+- SQLite for local development; PostgreSQL through configuration
+- Event listing with severity, event type, and source IP filters
+- Bounded pagination
+- API tests and Docker Compose development services
+
+## Run locally on Linux
+
+From the repository root:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+pip install -e .
+uvicorn watchtower.main:app --reload
+```
+
+The API listens on `http://127.0.0.1:8000`. The local SQLite database is created as `watchtower.db` in the current working directory.
+
+Open the interactive API documentation at `http://127.0.0.1:8000/docs`.
+
+## Run tests
+
+```bash
+pytest -q
+```
+
+## Run with PostgreSQL using Docker Compose
+
+Docker Compose publishes the API on localhost only. The database is kept on the internal Compose network.
+
+```bash
+docker compose up --build
+```
+
+The default Compose password is for local development only. Set a strong `POSTGRES_PASSWORD` in your shell or local environment before using this stack beyond a disposable local environment. Do not expose this development deployment directly to the internet.
+
+## API quick start
+
+Check process health:
+
+```bash
+curl http://127.0.0.1:8000/healthz
+```
+
+Check database readiness:
+
+```bash
+curl http://127.0.0.1:8000/readyz
+```
+
+Submit a sample event:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/events \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "event_type": "SSH Brute-Force",
+    "source": "linux-agent",
+    "hostname": "lab-linux-01",
+    "source_ip": "192.0.2.10",
+    "username": "test-user",
+    "severity": "high",
+    "message": "Repeated failed SSH logins",
+    "raw_event": {"attempts": 8}
+  }'
+```
+
+List events, or filter by event type and severity:
+
+```bash
+curl 'http://127.0.0.1:8000/api/v1/events?limit=50'
+curl 'http://127.0.0.1:8000/api/v1/events?event_type=ssh-brute-force&severity=high'
+```
 
 ## Planned capabilities
 
-- Security event ingestion, normalization, storage, and search
 - Rule-based detection and alert lifecycle
 - Analyst dashboard and incident management
 - Linux and Windows endpoint agents
@@ -21,10 +101,8 @@ The first milestone establishes a backend API for health checks and normalized s
 - Investigation timelines and forensic evidence
 - Controlled attack simulation and lab-only response automation
 
-## Development
-
-Requirements and setup instructions will be added as the initial backend is implemented.
+See [the roadmap](docs/ROADMAP.md) for milestones.
 
 ## Safety
 
-Watchtower is intended for authorized defensive monitoring and isolated lab testing. Response actions must be explicitly configured and scoped to systems the operator is authorized to administer.
+Watchtower is intended for authorized defensive monitoring and isolated lab testing. The initial API is a development foundation, not a production-secure deployment: authentication, authorization, agent identity, rate limiting, database migrations, and audit controls must be implemented before exposing it to untrusted networks. Response actions must be explicitly configured and scoped to systems the operator is authorized to administer.
