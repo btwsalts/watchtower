@@ -23,6 +23,14 @@ To publish it for free:
 
 The first deployment may require that one-time Pages setting in repository settings. The public website is separate from the FastAPI backend; GitHub Pages cannot host the Python API or PostgreSQL database.
 
+## Public interface
+
+- Landing page: `index.html`
+- Interactive SOC dashboard preview: `dashboard.html`
+- SVG browser favicon: `favicon.svg`
+
+The dashboard currently uses fictional in-browser sample data. It is not connected to the API, has no login, and does not perform live monitoring or response actions.
+
 ## Current capabilities
 
 - Health and database-readiness endpoints
