@@ -6,6 +6,65 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 Severity = Literal["info", "low", "medium", "high", "critical"]
+WorkspaceRole = Literal["owner", "admin", "analyst", "viewer"]
+
+
+class RegisterRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    display_name: str = Field(min_length=1, max_length=120)
+    workspace_name: str = Field(min_length=1, max_length=120)
+    password: str = Field(min_length=12, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        value = value.strip().lower()
+        if value.count("@") != 1 or "." not in value.rsplit("@", 1)[-1]:
+            raise ValueError("Enter a valid email address")
+        return value
+
+    @field_validator("display_name", "workspace_name")
+    @classmethod
+    def trim_required_names(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("This field cannot be blank")
+        return value
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    password: str = Field(min_length=1, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.strip().lower()
+
+
+class UserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: str
+    display_name: str
+    is_active: bool
+    created_at: datetime
+
+
+class WorkspaceRead(BaseModel):
+    id: str
+    name: str
+    role: WorkspaceRole
+    created_at: datetime
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: Literal["bearer"] = "bearer"
+    expires_in: int
+    user: UserRead
+    workspace: WorkspaceRead
 
 
 class SecurityEventCreate(BaseModel):
@@ -42,6 +101,14 @@ class SecurityEventCreate(BaseModel):
     def normalize_severity(cls, value: str) -> str:
         return value.strip().lower() if isinstance(value, str) else value
 
+    @field_validator("message")
+    @classmethod
+    def trim_message(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("message must contain a non-whitespace character")
+        return value
+
     def normalized_timestamp(self) -> datetime:
         """Return the supplied timestamp in UTC, or the current UTC time."""
         value = self.timestamp or datetime.now(timezone.utc)
@@ -56,6 +123,7 @@ class SecurityEventRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    workspace_id: str
     timestamp: datetime
     received_at: datetime
     event_type: str
