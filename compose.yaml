@@ -1,0 +1,30 @@
+services:
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://watchtower:${POSTGRES_PASSWORD:-local-only-change-me}@db:5432/watchtower
+      LOG_LEVEL: INFO
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: watchtower
+      POSTGRES_USER: watchtower
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-only-change-me}
+    volumes:
+      - watchtower-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U watchtower -d watchtower"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  watchtower-postgres:
