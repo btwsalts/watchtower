@@ -1,20 +1,22 @@
 # Watchtower
 
-**Watchtower** is a modular Security Operations Center (SOC) platform for security event collection, detection engineering, threat hunting, incident response, and digital forensics. It is a separate project from Sentinel and is being built in tested milestones.
+**Watchtower** is a modular Security Operations Center (SOC) platform for security event collection, detection engineering, threat hunting, incident response, and digital forensics. It is a separate project from Sentinel and is built in tested milestones.
 
 ## Project status
 
-**Milestone 2 — Accounts and workspace isolation (implementation started)**
+**Milestone 2 — Accounts, workspace isolation, and initial access management**
 
-The API foundation includes account registration and login, signed bearer access tokens, password hashing, workspace membership, and workspace-scoped event ingestion and retrieval. This is an early development implementation, not yet ready for public customer data.
+The API now includes account registration and login, expiring signed bearer tokens, Argon2 password hashing, private workspaces, member invitations, role checks, workspace-scoped event access, and audit records for important actions.
 
 ## Public website
 
 - Landing page: https://btwsalts.github.io/watchtower/
-- SOC dashboard preview: https://btwsalts.github.io/watchtower/dashboard.html
-- Browser favicon: `favicon.svg`
+- Demo dashboard: https://btwsalts.github.io/watchtower/dashboard.html
+- Sign in / sign up: https://btwsalts.github.io/watchtower/auth.html
+- Authenticated workspace portal: https://btwsalts.github.io/watchtower/app.html
+- Repository: https://github.com/btwsalts/watchtower
 
-The public dashboard is a static demo using fictional data. It does not connect to the API or collect visitor data.
+The demo dashboard uses fictional data. The sign-in and sign-up interface is published, but real authentication requires the backend to be deployed and its URL configured in `api-config.js`. The API is not yet deployed as a public service.
 
 ## Current API capabilities
 
@@ -23,11 +25,15 @@ The public dashboard is a static demo using fictional data. It does not connect 
 - Argon2 password hashing through pwdlib
 - Signed JWT bearer access tokens with expiration
 - Workspace membership and owner role on registration
-- Workspace selection via the `X-Workspace-ID` request header
+- Workspace selection through the `X-Workspace-ID` header
+- Single-use, seven-day workspace invitations (manual secure token delivery; no email service yet)
+- Workspace member listing and role changes
+- Owner/admin-only audit log viewing
 - Workspace-scoped event ingestion and retrieval
+- Role restrictions: owners/admins/analysts can ingest; viewers are read-only
 - Severity, event type, and source IP filters with bounded pagination
-- SQLite for local development; PostgreSQL via configuration
-- Tests and Docker Compose development services
+- Configurable CORS for the browser frontend
+- SQLite for local development; PostgreSQL through configuration
 
 ## Run locally on Linux
 
@@ -42,13 +48,32 @@ pip install -e .
 uvicorn watchtower.main:app --reload
 ```
 
-The API listens on `http://127.0.0.1:8000`. SQLite creates `watchtower.db` in the working directory. API documentation is available at `http://127.0.0.1:8000/docs`.
+The API listens on `http://127.0.0.1:8000`; the local SQLite database is `watchtower.db`. Interactive API documentation is at `http://127.0.0.1:8000/docs`.
+
+For the browser pages, edit `api-config.js` and set:
+
+```javascript
+window.WATCHTOWER_API_URL = "http://127.0.0.1:8000";
+```
+
+Serve the static site through a local HTTP server (not by opening the HTML file directly), and keep the API bound to localhost while testing. Never publish real secrets in `api-config.js`; it is public frontend configuration and should contain only the API origin.
 
 ## Run tests
 
 ```bash
 pytest -q
 ```
+
+## Run with PostgreSQL using Docker Compose
+
+```bash
+export POSTGRES_PASSWORD="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export WATCHTOWER_JWT_SECRET="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+export APP_ENV=production
+docker compose up --build
+```
+
+Compose binds the API to localhost only. Set `WATCHTOWER_CORS_ORIGINS` to a comma-separated list of trusted frontend origins if your site uses a different origin. Do not expose this development stack directly to the public internet.
 
 ## Register an account
 
@@ -63,19 +88,11 @@ curl -X POST http://127.0.0.1:8000/api/v1/auth/register \
   }'
 ```
 
-The response contains an access token and the new workspace ID. Treat the token as a secret. Passwords must be at least 12 characters.
+The response contains an access token and workspace ID. Passwords must be at least 12 characters. Treat access tokens as secrets.
 
-## Log in
+## Event API example
 
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"analyst@example.com","password":"replace-this-with-a-long-unique-password"}'
-```
-
-## Submit and list workspace events
-
-Replace `ACCESS_TOKEN` and `WORKSPACE_ID` with the values returned by registration or login.
+Replace `ACCESS_TOKEN` and `WORKSPACE_ID` with values returned by registration or login.
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/events \
@@ -91,32 +108,25 @@ curl -X POST http://127.0.0.1:8000/api/v1/events \
     "message": "Repeated failed SSH logins",
     "raw_event": {"attempts": 8}
   }'
-
-curl http://127.0.0.1:8000/api/v1/events \
-  -H 'Authorization: Bearer ACCESS_TOKEN' \
-  -H 'X-Workspace-ID: WORKSPACE_ID'
 ```
 
-A user must be a member of the selected workspace. The API scopes event queries to that workspace; choosing another user's workspace ID does not grant access.
+## Roles and invitations
 
-## PostgreSQL with Docker Compose
+- **Owner:** created on registration; can manage workspace access and view audit records.
+- **Admin:** can invite members, manage non-owner roles, and view audit records.
+- **Analyst:** can read and ingest security events.
+- **Viewer:** read-only event access.
 
-```bash
-export POSTGRES_PASSWORD="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
-export WATCHTOWER_JWT_SECRET="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
-docker compose up --build
-```
-
-Compose binds the API to localhost only. The default JWT secret and database password in Compose are development defaults: override both for any shared environment. To enable production configuration checks, set `APP_ENV=production` and supply `WATCHTOWER_JWT_SECRET` with at least 32 random characters.
+Owners/admins can create invitations from the workspace portal or `POST /api/v1/workspaces/invitations`. The API returns a one-time token; send it to the invited person using a secure channel. The invitee must already have an account with the invited email, sign in, and accept the token at the workspace portal. The token is hashed at rest and expires after seven days. Automated email delivery is not implemented.
 
 ## Important limitations before public launch
 
-This milestone is not a complete multi-tenant production service. Before accepting real customer data, Watchtower still needs formal versioned database migrations, rate limiting, login abuse controls, email verification and password reset, workspace member invitation and role-management endpoints, audit logging, secret rotation, backup/restore testing, operational monitoring, and a security review. Existing events from a pre-workspace database are kept unassigned during upgrade and are not returned to workspace users; migrate them deliberately if they need to be retained.
+This is not yet a production-ready multi-tenant service. Before accepting customer data, Watchtower still needs versioned Alembic migrations, persistent login rate limiting and abuse controls, email verification and password reset, token/session revocation, owner transfer and member removal flows, stronger invitation delivery, comprehensive audit coverage, backup/restore testing, operational monitoring, and an independent security review. The current legacy database upgrade is transitional, not a substitute for a migration system. Events from an older schema remain unassigned and are intentionally hidden from workspace queries until deliberately migrated.
 
 ## Planned capabilities
 
 - Detection rules and alert lifecycle
-- Live analyst dashboard and incident management
+- Live detection and incident workflow
 - Linux and Windows endpoint agents
 - Network telemetry and detection
 - Threat-intelligence enrichment and MITRE ATT&CK mapping
