@@ -31,9 +31,9 @@ def validate_security_config() -> None:
     """Fail startup if production is configured with the development signing secret."""
     app_env = os.getenv("APP_ENV", "development").strip().lower()
     secret = os.getenv("WATCHTOWER_JWT_SECRET", "").strip()
-    if app_env in {"production", "prod"} and len(secret) < 32:
+    if app_env in {"production", "prod"} and (len(secret) < 32 or secret == _DEVELOPMENT_SECRET):
         raise RuntimeError(
-            "Production requires WATCHTOWER_JWT_SECRET with at least 32 random characters."
+            "Production requires a unique WATCHTOWER_JWT_SECRET with at least 32 random characters; the development default is forbidden."
         )
 
 
