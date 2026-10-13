@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from watchtower.database import Base, engine, get_db
 from watchtower.models import SecurityEvent
 from watchtower.schemas import EventList, SecurityEventCreate, SecurityEventRead
+from watchtower.security import require_api_token, validate_security_config
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
 logger = logging.getLogger("watchtower")
@@ -21,6 +22,7 @@ logger = logging.getLogger("watchtower")
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     """Initialize database tables for this development milestone."""
+    validate_security_config()
     Base.metadata.create_all(bind=engine)
     logger.info("Watchtower database initialized")
     yield
@@ -51,7 +53,7 @@ def readiness_check(db: Annotated[Session, Depends(get_db)]) -> dict[str, str]:
     return {"status": "ready", "database": "ok"}
 
 
-@app.post("/api/v1/events", response_model=SecurityEventRead, status_code=status.HTTP_201_CREATED, tags=["events"])
+@app.post("/api/v1/events", response_model=SecurityEventRead, status_code=status.HTTP_201_CREATED, tags=["events"], dependencies=[Depends(require_api_token)])
 def ingest_event(payload: SecurityEventCreate, db: Annotated[Session, Depends(get_db)]) -> SecurityEvent:
     """Validate, normalize, and persist one security event."""
     event = SecurityEvent(
@@ -76,7 +78,7 @@ def ingest_event(payload: SecurityEventCreate, db: Annotated[Session, Depends(ge
     return event
 
 
-@app.get("/api/v1/events", response_model=EventList, tags=["events"])
+@app.get("/api/v1/events", response_model=EventList, tags=["events"], dependencies=[Depends(require_api_token)])
 def list_events(
     db: Annotated[Session, Depends(get_db)],
     limit: int = Query(default=50, ge=1, le=200),
