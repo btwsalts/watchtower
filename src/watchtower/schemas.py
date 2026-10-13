@@ -103,6 +103,8 @@ class MembershipRoleUpdate(BaseModel):
 
 
 class AuditLogRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     workspace_id: str | None
     actor_user_id: str | None
