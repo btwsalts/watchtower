@@ -3,6 +3,8 @@ services:
     build: .
     environment:
       DATABASE_URL: postgresql+psycopg://watchtower:${POSTGRES_PASSWORD:-local-only-change-me}@db:5432/watchtower
+      APP_ENV: ${APP_ENV:-development}
+      WATCHTOWER_JWT_SECRET: ${WATCHTOWER_JWT_SECRET:-watchtower-local-development-secret-change-before-production}
       LOG_LEVEL: INFO
     ports:
       - "127.0.0.1:8000:8000"
