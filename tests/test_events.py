@@ -196,3 +196,105 @@ def test_production_requires_strong_jwt_secret(monkeypatch: pytest.MonkeyPatch) 
 
     monkeypatch.setenv("WATCHTOWER_JWT_SECRET", "production-secret-with-at-least-32-chars")
     validate_security_config()
+
+
+
+def test_invitation_acceptance_role_permissions_and_audit_logs(client: TestClient) -> None:
+    owner = register(client, "owner@example.com", "Blue SOC")
+    analyst = register(client, "analyst@example.com", "Analyst Home")
+    owner_headers = auth_headers(owner)
+    analyst_headers = auth_headers(analyst)
+
+    created = client.post(
+        "/api/v1/workspaces/invitations",
+        headers=owner_headers,
+        json={"email": "analyst@example.com", "role": "viewer"},
+    )
+    assert created.status_code == 201, created.text
+    invite = created.json()
+    assert "invite_token" in invite
+
+    accepted = client.post(
+        "/api/v1/workspaces/invitations/accept",
+        headers={"Authorization": analyst_headers["Authorization"]},
+        json={"invite_token": invite["invite_token"]},
+    )
+    assert accepted.status_code == 200, accepted.text
+    assert accepted.json()["role"] == "viewer"
+    invited_headers = {
+        "Authorization": analyst_headers["Authorization"],
+        "X-Workspace-ID": owner["workspace"]["id"],
+    }
+
+    assert client.get("/api/v1/events", headers=invited_headers).status_code == 200
+    denied_write = client.post(
+        "/api/v1/events",
+        headers=invited_headers,
+        json={"event_type": "login", "message": "viewer cannot ingest"},
+    )
+    assert denied_write.status_code == 403
+
+    member_list = client.get("/api/v1/workspaces/members", headers=owner_headers)
+    assert member_list.status_code == 200
+    invited_member = next(item for item in member_list.json() if item["email"] == "analyst@example.com")
+    changed = client.patch(
+        f"/api/v1/workspaces/members/{invited_member['membership_id']}",
+        headers=owner_headers,
+        json={"role": "analyst"},
+    )
+    assert changed.status_code == 200
+    assert changed.json()["role"] == "analyst"
+
+    audit_logs = client.get("/api/v1/audit-logs", headers=owner_headers)
+    assert audit_logs.status_code == 200
+    actions = {item["action"] for item in audit_logs.json()}
+    assert "account.registered" in actions
+    assert "workspace.invitation_created" in actions
+    assert "workspace.invitation_accepted" in actions
+    assert "workspace.member_role_changed" in actions
+
+
+def test_non_admin_cannot_invite_or_read_audit_logs(client: TestClient) -> None:
+    owner = register(client, "owner@example.com", "Blue SOC")
+    analyst = register(client, "analyst@example.com", "Analyst Home")
+    invite = client.post(
+        "/api/v1/workspaces/invitations",
+        headers=auth_headers(owner),
+        json={"email": "analyst@example.com", "role": "analyst"},
+    )
+    assert invite.status_code == 201
+    accepted = client.post(
+        "/api/v1/workspaces/invitations/accept",
+        headers={"Authorization": f"Bearer {analyst['access_token']}"},
+        json={"invite_token": invite.json()["invite_token"]},
+    )
+    assert accepted.status_code == 200
+    analyst_in_owner_workspace = {
+        "Authorization": f"Bearer {analyst['access_token']}",
+        "X-Workspace-ID": owner["workspace"]["id"],
+    }
+    assert client.get("/api/v1/audit-logs", headers=analyst_in_owner_workspace).status_code == 403
+    assert client.post(
+        "/api/v1/workspaces/invitations",
+        headers=analyst_in_owner_workspace,
+        json={"email": "third@example.com", "role": "viewer"},
+    ).status_code == 403
+
+
+def test_invitation_is_email_bound_and_single_use(client: TestClient) -> None:
+    owner = register(client, "owner@example.com", "Blue SOC")
+    wrong_user = register(client, "wrong@example.com", "Personal")
+    invite = client.post(
+        "/api/v1/workspaces/invitations",
+        headers=auth_headers(owner),
+        json={"email": "right@example.com", "role": "analyst"},
+    )
+    assert invite.status_code == 201
+    token = invite.json()["invite_token"]
+
+    wrong_accept = client.post(
+        "/api/v1/workspaces/invitations/accept",
+        headers={"Authorization": f"Bearer {wrong_user['access_token']}"},
+        json={"invite_token": token},
+    )
+    assert wrong_accept.status_code == 403
