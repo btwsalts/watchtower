@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, inspect, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -80,6 +81,23 @@ app = FastAPI(
     description="Workspace-isolated security telemetry, accounts, and access control.",
     version="0.3.0",
     lifespan=lifespan,
+)
+
+
+_cors_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "WATCHTOWER_CORS_ORIGINS",
+        "https://btwsalts.github.io,http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Workspace-ID"],
 )
 
 
